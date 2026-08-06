@@ -1,0 +1,16 @@
+services:
+  osint:
+    build: .
+    container_name: osint-suite
+    ports:
+      - "127.0.0.1:8000:8000"   # bound to localhost only - do not expose publicly
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      # persist the GHunt session created by `ghunt login`
+      - ghunt-creds:/root/.malfrats
+    restart: unless-stopped
+
+volumes:
+  ghunt-creds:

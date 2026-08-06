@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSINT Suite Lite — تقرير موحّد</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="/vendor/cytoscape.min.js" defer></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span>OSINT Suite <small>lite</small></span>
+  </div>
+  <div class="right">
+    <span class="edition">VERCEL · 5 وحدات</span>
+  </div>
+</div>
+
+<div class="shell">
+
+  <aside>
+    <div class="field">
+      <label for="target">الهدف</label>
+      <input type="text" id="target" placeholder="name@example.com" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="field">
+      <label for="ttype">النوع</label>
+      <select id="ttype">
+        <option value="auto">كشف تلقائي</option>
+        <option value="email">بريد إلكتروني</option>
+        <option value="phone">رقم هاتف</option>
+        <option value="domain">نطاق</option>
+      </select>
+    </div>
+
+    <label class="check">
+      <input type="checkbox" id="pivot" checked>
+      تتبّع المعرّفات المكتشفة تلقائياً
+    </label>
+    <label class="check">
+      <input type="checkbox" id="consent">
+      أملك تفويضاً قانونياً لفحص هذا الهدف
+    </label>
+
+    <button class="run" id="run" disabled>ابدأ الفحص</button>
+
+    <div class="rail" id="rail" hidden>
+      <h3><span>الوحدات</span> <span class="mono" id="elapsed">—</span></h3>
+      <div id="rail-items"></div>
+    </div>
+
+    <div class="unavail">
+      <b>غير متاح في هذه النسخة</b>
+      <code>holehe</code> · <code>maigret</code> · <code>ghunt</code> —
+      تحتاج عمليات فرعية ودقائق من التنفيذ، وهو ما لا توفّره دوال Vercel.
+      شغّل نسخة Docker إن احتجت البحث باسم المستخدم أو حسابات Google.
+    </div>
+
+    <div class="hist">
+      <h3 style="font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:22px 0 8px">عمليات سابقة</h3>
+      <div id="history"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="idle">
+      <div class="hero">
+        <div class="eyebrow">تجميع وربط من مصادر مفتوحة</div>
+        <h1>أدخل معرّفاً واحداً، اقرأ تقريراً واحداً.</h1>
+        <div class="sub" style="direction:rtl;text-align:right;font-family:var(--sans)">
+          خمس وحدات تعمل بالتوازي على HTTP و DNS فقط، وتنتهي في ثوانٍ. النتائج تُدمج
+          في رسم علاقات واحد، ولكل نتيجة درجة ثقة.
+        </div>
+      </div>
+      <div class="notice">
+        درجة الثقة تقدير آلي. اسم المستخدم المشتق من البريد يُعامَل كتخمين لا كحقيقة،
+        ويظهر بلون مختلف في الرسم. تحقّق يدوياً قبل أي قرار يمسّ شخصاً.
+      </div>
+      <div class="empty-state">
+        <b>لا يوجد فحص نشط</b>
+        أدخل بريداً أو رقم هاتف أو نطاقاً في اللوحة الجانبية للبدء.
+      </div>
+    </div>
+
+    <div id="result" hidden>
+      <div class="hero">
+        <div class="eyebrow" id="r-type">—</div>
+        <h1><span class="t" id="r-target">—</span></h1>
+        <div class="sub" id="r-meta">—</div>
+      </div>
+
+      <div id="err-slot"></div>
+      <div class="stats" id="stats"></div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-panel="p-findings" aria-selected="true">النتائج <span class="n" id="n-findings">0</span></button>
+        <button class="tab" role="tab" data-panel="p-graph" aria-selected="false">الرسم البياني <span class="n" id="n-nodes">0</span></button>
+        <button class="tab" role="tab" data-panel="p-log" aria-selected="false">السجل</button>
+      </div>
+
+      <div class="panel" id="p-findings"></div>
+
+      <div class="panel" id="p-graph" hidden>
+        <div id="graph"></div>
+        <div class="legend">
+          <span><i style="background:#FFB020"></i>الهدف</span>
+          <span><i style="background:#DCE3EA"></i>كيان مؤكَّد</span>
+          <span><i style="background:#F2555A"></i>تسريب</span>
+          <span><i style="background:#38BDF8"></i>مشتق (ثقة منخفضة)</span>
+          <span>حجم العقدة = عدد الروابط</span>
+        </div>
+        <div class="node-card" id="node-card" hidden></div>
+      </div>
+
+      <div class="panel" id="p-log" hidden><div class="log" id="log"></div></div>
+
+      <div class="actions">
+        <button class="btn" id="print">طباعة التقرير</button>
+        <button class="btn" id="dl-json">تنزيل JSON</button>
+        <button class="btn" id="again">فحص جديد</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
